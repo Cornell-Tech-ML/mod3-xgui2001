@@ -545,63 +545,72 @@ def _tensor_matrix_multiply(
     #    b) Copy into shared memory for b matrix
     #    c) Compute the dot produce for position c[i, j]
 
-    # 'value' is the accumulator for the dot product of the corresponding row of a and column of b.
-    # Each thread will compute one elemnet of the result matrix.
+    # Initialize accumulator for the dot product result for this thread
+    # Each thread computes exactly one element of the output matrix
     value = 0.0
 
-    # This loop moves thorugh the shred dimension (columsn of a and rows of b)  in size BLOCK_DIM.
-    # THe loop ensures that all parts of the matrices are processesd, even if the matric's dimension arent
-    # exact multiples of BLOCK_DIM.
+    # Iterate over matrix chunks of size BLOCK_DIM x BLOCK_DIM
+    # Using ceiling division to handle matrices whose dimensions aren't multiples of BLOCK_DIM
     for tile in range((a_shape[-1] + BLOCK_DIM - 1) // BLOCK_DIM):
-        # Check if thread is within bounds of the matric deimnsions and load the corresponding
-        # element from global memory (a_storage) into the shared memory (a_shared).
-        # In the case the thread is out of bounds (e.g. when the matrix
-        # dimensions do not perfectly align with block size), assign 0.0 to shared memory to pad the tile.
-        # (as multiplying by 0 does not affect the final result)
+        # Load data from matrix A into shared memory if the thread's position is valid
+        # This check ensures we don't access memory outside the matrix boundaries
         if i < a_shape[-2] and tile * BLOCK_DIM + pj < a_shape[-1]:
-            # Calculate the global memory address for element of a:
-            # 1. batch * a_batch_stride: batch offset (if batching is used)
-            # 2. row * a_strides[-2]: row offset
-            # 3. (tile * BLOCK_DIM + thread_y) * a_strides[-1]: column offset
+            # Calculate the exact position in global memory for matrix A element
+            # batch * a_batch_stride: moves to the correct batch if batched multiplication
+            # i * a_strides[-2]: moves to the correct row
+            # (tile * BLOCK_DIM + pj) * a_strides[-1]: moves to the correct column within the current tile
             a_shared[pi, pj] = a_storage[
                 batch * a_batch_stride
                 + i * a_strides[-2]
                 + (tile * BLOCK_DIM + pj) * a_strides[-1]
             ]
         else:
+            # If thread position is outside matrix bounds, pad with zero
+            # This ensures correct computation without affecting the result
             a_shared[pi, pj] = 0.0
 
-        # Do the same thing for b (Checking bounds and loading into shared memory)
+        # Similar boundary check for matrix B
+        # Validates if the thread's position falls within matrix B's dimensions
         if tile * BLOCK_DIM + pi < b_shape[-2] and j < b_shape[-1]:
-            # Calculate the global memory address for element of b:
-            # 1. batch * b_batch_stride: batch offset (if batching is used)
-            # 2. (tile * BLOCK_DIM + pi) * b_strides[-2]: row offset
-            # 3. j * b_strides[-1]: column offset
+            # Calculate global memory position for matrix B element
+            # batch * b_batch_stride: batch offset for batched operations
+            # (tile * BLOCK_DIM + pi) * b_strides[-2]: row offset within current tile
+            # j * b_strides[-1]: column offset
             b_shared[pi, pj] = b_storage[
                 batch * b_batch_stride
                 + (tile * BLOCK_DIM + pi) * b_strides[-2]
                 + j * b_strides[-1]
             ]
         else:
+            # Zero padding for out-of-bounds positions
+            # Maintains correct computation without contributing to the result
             b_shared[pi, pj] = 0.0
 
-        # Synchronize threads to ensure tiles are fully loaded before proceding with computation.
+        # Synchronization barrier - ensures all threads have finished loading data
+        # Critical for preventing race conditions and maintaining data consistency
         cuda.syncthreads()
 
-        # Each thread computes part of the dot product for its assigned row-column pair using the
-        # shared memroy tiles. The k loop iterates over the elements of the shared_memory tiles
+        # Compute partial dot product for current tile
+        # Iterates through corresponding elements in the shared memory tiles
         for k in range(BLOCK_DIM):
+            # Accumulate the product of corresponding elements
+            # a_shared[pi, k] is element from matrix A's row
+            # b_shared[k, pj] is element from matrix B's column
             value += a_shared[pi, k] * b_shared[k, pj]
 
-        # Synchronize threads before loading the next tile
+        # Synchronization barrier before next iteration
+        # Ensures all threads complete computation before loading next tile
         cuda.syncthreads()
 
-    # Check if the threads' position is within bounds of the output matrix and write the result to the
-    # output matrix. Calculate the flattened index (out_pos) for the output tensor using strides. Write the computed
-    # value back to global memory.
+    # Final boundary check before writing result
+    # Ensures thread is computing a valid element of output matrix
     if i < out_shape[-2] and j < out_shape[-1]:
+        # Calculate flattened index in output array using strides
+        # batch * out_strides[0]: moves to correct batch
+        # i * out_strides[1]: moves to correct row
+        # j * out_strides[2]: moves to correct column
         out_pos = batch * out_strides[0] + i * out_strides[1] + j * out_strides[2]
+        # Store computed result in global memory
         out[out_pos] = value
-
 
 tensor_matrix_multiply = jit(_tensor_matrix_multiply)
