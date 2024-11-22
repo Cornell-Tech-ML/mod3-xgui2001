@@ -291,17 +291,17 @@ def _sum_practice(out: Storage, a: Storage, size: int) -> None:
 
     cuda.syncthreads()
 
-    # Perform reduction in log2(32) = 5 steps
-    for step in range(5):
-        stride = 1 << step  # 2^step: 1, 2, 4, 8, 16
-        if pos % (2 * stride) == 0:
-            cache[pos] += cache[pos + stride]
+    # Perform reduction within the block
+    step = 1
+    while step < cuda.blockDim.x:
+        if pos % (2 * step) == 0 and (pos + step) < cuda.blockDim.x:
+            cache[pos] += cache[pos + step]
         cuda.syncthreads()
+        step *= 2
 
-    # Write final result for this block
+    # Output the result for this block
     if pos == 0:
         out[cuda.blockIdx.x] = cache[0]
-
 
 jit_sum_practice = cuda.jit()(_sum_practice)
 
@@ -355,44 +355,25 @@ def tensor_reduce(
         reduce_dim: int,
         reduce_value: float,
     ) -> None:
-        BLOCK_DIM = 1024
-        cache = cuda.shared.array(BLOCK_DIM, numba.float64)
+        #BLOCK_DIM = 1024
+        #cache = cuda.shared.array(BLOCK_DIM, numba.float64)
         out_index = cuda.local.array(MAX_DIMS, numba.int32)
-        block_pos = cuda.blockIdx.x
-        thread_pos = cuda.threadIdx.x
+        # block_pos = cuda.blockIdx.x
+        # thread_pos = cuda.threadIdx.x
 
-        # Check if this block should process data
-        if block_pos >= out_size:
-            return
+        # Global thread index
+        i = cuda.blockIdx.x * cuda.blockDim.x + cuda.threadIdx.x
 
-        # Map block position to tensor coordinates
-        to_index(block_pos, out_shape, out_index)
+        if i < out_size:
+            to_index(i, out_shape, out_index)
+            out_pos = index_to_position(out_index, out_strides)
 
-        # Calculate position in reduction dimension
-        reduction_pos = out_index[reduce_dim] * BLOCK_DIM + thread_pos
-        out_index[reduce_dim] = reduction_pos
+            for j in range(a_shape[reduce_dim]):
+                out_index[reduce_dim] = j
+                in_pos = index_to_position(out_index, a_strides)
+                reduce_value = fn(reduce_value, a_storage[in_pos])
 
-        # Load data if position is valid
-        if reduction_pos < a_shape[reduce_dim]:
-            a_pos = index_to_position(out_index, a_strides)
-            cache[thread_pos] = a_storage[a_pos]
-
-        # Wait for all threads to load data
-        cuda.syncthreads()
-
-        # Perform tree reduction
-        for stride in range(10):  # Handle 1024 elements (2^10)
-            # Check if this thread participates in current reduction step
-            stride_offset = 2**stride
-            if thread_pos % (stride_offset * 2) == 0:
-                other_pos = thread_pos + stride_offset
-                cache[thread_pos] = fn(cache[thread_pos], cache[other_pos])
-
-        cuda.syncthreads()
-
-        # Store final result
-        if thread_pos == 0:
-            out[block_pos] = cache[0]
+            out[out_pos] = reduce_value
 
     return jit(_reduce)  # type: ignore
 
@@ -455,7 +436,6 @@ def _mm_practice(out: Storage, a: Storage, b: Storage, size: int) -> None:
 
     # Store final value in output matrix
     out[size * i + j] = sum_val
-
 
 jit_mm_practice = jit(_mm_practice)
 
