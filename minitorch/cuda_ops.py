@@ -447,8 +447,8 @@ def _mm_practice(out: Storage, a: Storage, b: Storage, size: int) -> None:
     """
     BLOCK_DIM = 32
     # Create tile buffers in shared memory
-    shared_a = cuda.shared.array((BLOCK_DIM, BLOCK_DIM), numba.float64)
-    shared_b = cuda.shared.array((BLOCK_DIM, BLOCK_DIM), numba.float64)
+    shared_a = cuda.shared.array((BLOCK_DIM, BLOCK_DIM), numba.float32)
+    shared_b = cuda.shared.array((BLOCK_DIM, BLOCK_DIM), numba.float32)
 
     # Check thread boundaries before computation
     if cuda.threadIdx.x < size and cuda.threadIdx.y < size:
