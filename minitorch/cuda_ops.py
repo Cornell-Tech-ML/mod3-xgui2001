@@ -430,8 +430,8 @@ def _mm_practice(out: Storage, a: Storage, b: Storage, size: int) -> None:
     """
     BLOCK_DIM = 32
     # Create tile buffers in shared memory
-    tile_a = cuda.shared.array((BLOCK_DIM, BLOCK_DIM), numba.float64)
-    tile_b = cuda.shared.array((BLOCK_DIM, BLOCK_DIM), numba.float64)
+    tile_a = cuda.shared.array((BLOCK_DIM, BLOCK_DIM), numba.float32)
+    tile_b = cuda.shared.array((BLOCK_DIM, BLOCK_DIM), numba.float32)
 
     # Get local thread coordinates
     i = cuda.threadIdx.x
@@ -535,31 +535,62 @@ def _tensor_matrix_multiply(
     #    b) Copy into shared memory for b matrix
     #    c) Compute the dot produce for position c[i, j]
 
-    # Step 1: Load all data into shared memory (each cell is read exactly once)
-    if pi < a_shape[-2] and j < a_shape[-1]:
-        a_idx = batch * a_batch_stride + pi * a_strides[-2] + j * a_strides[-1]
-        a_shared[i, j] = a_storage[a_idx]
-    else:
-        a_shared[i, j] = 0.0
+     # 'value' is the accumulator for the dot product of the corresponding row of a and column of b.
+    # Each thread will compute one elemnet of the result matrix.
+    value = 0.0
 
-    if i < b_shape[-2] and pj < b_shape[-1]:
-        b_idx = batch * b_batch_stride + i * b_strides[-2] + pj * b_strides[-1]
-        b_shared[i, j] = b_storage[b_idx]
-    else:
-        b_shared[i, j] = 0.0
+    # This loop moves thorugh the shred dimension (columsn of a and rows of b)  in size BLOCK_DIM.
+    # THe loop ensures that all parts of the matrices are processesd, even if the matric's dimension arent
+    # exact multiples of BLOCK_DIM.
+    for tile in range((a_shape[-1] + BLOCK_DIM - 1) // BLOCK_DIM):
+        # Check if thread is within bounds of the matric deimnsions and load the corresponding
+        # element from global memory (a_storage) into the shared memory (a_shared).
+        # In the case the thread is out of bounds (e.g. when the matrix
+        # dimensions do not perfectly align with block size), assign 0.0 to shared memory to pad the tile.
+        # (as multiplying by 0 does not affect the final result)
+        if i < a_shape[-2] and tile * BLOCK_DIM + pj < a_shape[-1]:
+            # Calculate the global memory address for element of a:
+            # 1. batch * a_batch_stride: batch offset (if batching is used)
+            # 2. row * a_strides[-2]: row offset
+            # 3. (tile * BLOCK_DIM + thread_y) * a_strides[-1]: column offset
+            a_shared[pi, pj] = a_storage[
+                batch * a_batch_stride
+                + i * a_strides[-2]
+                + (tile * BLOCK_DIM + pj) * a_strides[-1]
+            ]
+        else:
+            a_shared[pi, pj] = 0.0
 
-    # Make sure all threads have finished loading data
-    cuda.syncthreads()
+        # Do the same thing for b (Checking bounds and loading into shared memory)
+        if tile * BLOCK_DIM + pi < b_shape[-2] and j < b_shape[-1]:
+            # Calculate the global memory address for element of b:
+            # 1. batch * b_batch_stride: batch offset (if batching is used)
+            # 2. (tile * BLOCK_DIM + pi) * b_strides[-2]: row offset
+            # 3. j * b_strides[-1]: column offset
+            b_shared[pi, pj] = b_storage[
+                batch * b_batch_stride
+                + (tile * BLOCK_DIM + pi) * b_strides[-2]
+                + j * b_strides[-1]
+            ]
+        else:
+            b_shared[pi, pj] = 0.0
 
-    # Step 2: Compute result using shared memory
-    acc = 0.0
-    for k in range(min(a_shape[-1], BLOCK_DIM)):
-        acc += a_shared[i, k] * b_shared[k, j]
+        # Synchronize threads to ensure tiles are fully loaded before proceding with computation.
+        cuda.syncthreads()
 
-    # Step 3: Write to global memory exactly once
-    if pi < out_shape[-2] and pj < out_shape[-1]:
-        out_idx = batch * out_strides[0] + pi * out_strides[-2] + pj * out_strides[-1]
-        out[out_idx] = acc
+        # Each thread computes part of the dot product for its assigned row-column pair using the
+        # shared memroy tiles. The k loop iterates over the elements of the shared_memory tiles
+        for k in range(BLOCK_DIM):
+            value += a_shared[pi, k] * b_shared[k, pj]
 
+        # Synchronize threads before loading the next tile
+        cuda.syncthreads()
 
+    # Check if the threads' position is within bounds of the output matrix and write the result to the
+    # output matrix. Calculate the flattened index (out_pos) for the output tensor using strides. Write the computed
+    # value back to global memory.
+    if i < out_shape[-2] and j < out_shape[-1]:
+        out_pos = batch * out_strides[0] + i * out_strides[1] + j * out_strides[2]
+        out[out_pos] = value
+    
 tensor_matrix_multiply = jit(_tensor_matrix_multiply)
