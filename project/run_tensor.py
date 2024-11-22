@@ -11,6 +11,43 @@ def RParam(*shape):
     r = 2 * (minitorch.rand(shape) - 0.5)
     return minitorch.Parameter(r)
 
+# TODO: Implement for Task 2.5.
+
+class Network(minitorch.Module):
+    def __init__(self, hidden_layers):
+        super().__init__()
+        self.layer1 = Linear(2, hidden_layers)
+        self.layer2 = Linear(hidden_layers, hidden_layers)
+        self.layer3 = Linear(hidden_layers, 1)
+
+    def forward(self, x):
+        middle = self.layer1.forward(x).relu()
+        end = self.layer2.forward(middle).relu()
+        return self.layer3.forward(end).sigmoid()
+
+class Linear(minitorch.Module):
+    def __init__(self, in_size, out_size):
+        super().__init__()
+        # Use RParam to initialize weights and bias
+        self.weights = RParam(in_size, out_size)
+        self.bias = RParam(out_size)
+
+    def forward(self, x):
+        batch = x.shape[0]
+        in_size = self.weights.value.shape[0]
+        out_size = self.weights.value.shape[1]
+
+        # Reshape x to (batch, in_size)
+        x = x.view(batch, in_size)
+
+        # Elementwise multiplication with broadcasting
+        mult = x.view(batch, in_size, 1) * self.weights.value.view(1, in_size, out_size)
+        out = mult.sum(1)
+
+        # Add bias and ensure output shape is (batch, out_size)
+        return (out + self.bias.value).view(batch, out_size)
+
+
 
 def default_log_fn(epoch, total_loss, correct, losses):
     print("Epoch ", epoch, " loss ", total_loss, "correct", correct)
@@ -64,6 +101,6 @@ class TensorTrain:
 if __name__ == "__main__":
     PTS = 50
     HIDDEN = 2
-    RATE = 0.5
+    RATE = 0.1
     data = minitorch.datasets["Simple"](PTS)
     TensorTrain(HIDDEN).train(data, RATE)

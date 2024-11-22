@@ -39,7 +39,7 @@ class ScalarHistory:
 
     last_fn: Optional[Type[ScalarFunction]] = None
     ctx: Optional[Context] = None
-    inputs: Sequence[Scalar] = ()
+    inputs: Sequence[Variable] = ()
 
 
 # ## Task 1.2 and 1.4
@@ -112,21 +112,35 @@ class Scalar:
         return self.history is not None and self.history.last_fn is None
 
     def is_constant(self) -> bool:
+        """True if this variable was created by an operation on constants."""
         return self.history is None
 
     @property
     def parents(self) -> Iterable[Variable]:
-        """Get the variables used to create this one."""
+        """Get the parent variables of this variable."""
         assert self.history is not None
         return self.history.inputs
 
     def chain_rule(self, d_output: Any) -> Iterable[Tuple[Variable, Any]]:
+        """Apply the chain rule to get the derivatives of the inputs."""
         h = self.history
         assert h is not None
         assert h.last_fn is not None
         assert h.ctx is not None
 
-        raise NotImplementedError("Need to include this file from past assignment.")
+        print(f"Chain rule for {self}, d_output: {d_output}")
+        print(f"Last function: {h.last_fn}")
+
+        local_derivatives = h.last_fn._backward(h.ctx, d_output)
+        print(f"Local derivatives: {local_derivatives}")
+
+        result = []
+        for var, der in zip(h.inputs, local_derivatives):
+            if not var.is_constant():
+                result.append((var, der))
+
+        print(f"Chain rule result: {result}")
+        return result
 
     def backward(self, d_output: Optional[float] = None) -> None:
         """Calls autodiff to fill in the derivatives for the history of this object.
@@ -141,25 +155,62 @@ class Scalar:
             d_output = 1.0
         backpropagate(self, d_output)
 
-    raise NotImplementedError("Need to include this file from past assignment.")
+    def __eq__(self, other: ScalarLike) -> Scalar:
+        return EQ.apply(self, other)
+
+    def __lt__(self, other: ScalarLike) -> Scalar:
+        """Less than operation."""
+        return LT.apply(self, other)
+
+    def __gt__(self, other: ScalarLike) -> Scalar:
+        """Greater than operation."""
+        return LT.apply(other, self)
+
+    def __sub__(self, other: ScalarLike) -> Scalar:
+        """Subtraction operation."""
+        return Add.apply(self, -other)
+
+    def __neg__(self) -> Scalar:
+        """Negation operation."""
+        return Neg.apply(self)
+
+    def __add__(self, other: ScalarLike) -> Scalar:
+        """Addition operation."""
+        return Add.apply(self, other)
+
+    def log(self) -> Scalar:
+        """Logarithm operation."""
+        return Log.apply(self)
+
+    def exp(self) -> Scalar:
+        """Exponential operation."""
+        return Exp.apply(self)
+
+    def sigmoid(self) -> Scalar:
+        """Sigmoid operation."""
+        return Sigmoid.apply(self)
+
+    def relu(self) -> Scalar:
+        """ReLU operation."""
+        return ReLU.apply(self)
 
 
 def derivative_check(f: Any, *scalars: Scalar) -> None:
     """Checks that autodiff works on a python function.
-    Asserts False if derivative is incorrect.
 
-    Parameters
-    ----------
-        f : function from n-scalars to 1-scalar.
-        *scalars  : n input scalar values.
+    Args:
+    ----
+        f: The function to check.
+        *scalars: Scalar values to be used in the check.
 
     """
+    ...
     out = f(*scalars)
     out.backward()
 
     err_msg = """
-Derivative check at arguments f(%s) and received derivative f'=%f for argument %d,
-but was expecting derivative f'=%f from central difference."""
+    Derivative check at arguments f(%s) and received derivative f'=%f for argument %d,
+    but was expecting derivative f'=%f from central difference."""
     for i, x in enumerate(scalars):
         check = central_difference(f, *scalars, arg=i)
         print(str([x.data for x in scalars]), x.derivative, i, check)
