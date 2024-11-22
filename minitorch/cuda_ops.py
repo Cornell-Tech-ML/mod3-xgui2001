@@ -307,6 +307,17 @@ jit_sum_practice = cuda.jit()(_sum_practice)
 
 
 def sum_practice(a: Tensor) -> TensorData:
+    """Practice sum function.
+
+    Args:
+    ----
+        a (Tensor): input tensor.
+
+    Returns:
+    -------
+        TensorData: output tensor.
+
+    """
     (size,) = a.shape
     threadsperblock = THREADS_PER_BLOCK
     blockspergrid = (size // THREADS_PER_BLOCK) + 1
@@ -419,8 +430,8 @@ def _mm_practice(out: Storage, a: Storage, b: Storage, size: int) -> None:
     """
     BLOCK_DIM = 32
     # Create tile buffers in shared memory
-    tile_a = cuda.shared.array((32, 32), numba.float64)
-    tile_b = cuda.shared.array((32, 32), numba.float64)
+    tile_a = cuda.shared.array((BLOCK_DIM, BLOCK_DIM), numba.float64)
+    tile_b = cuda.shared.array((BLOCK_DIM, BLOCK_DIM), numba.float64)
 
     # Get local thread coordinates
     i = cuda.threadIdx.x
