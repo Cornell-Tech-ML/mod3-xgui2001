@@ -447,37 +447,31 @@ def _mm_practice(out: Storage, a: Storage, b: Storage, size: int) -> None:
     """
     BLOCK_DIM = 32
     # Create tile buffers in shared memory
-    shared_a = cuda.shared.array((BLOCK_DIM, BLOCK_DIM), numba.float32)
-    shared_b = cuda.shared.array((BLOCK_DIM, BLOCK_DIM), numba.float32)
+    tile_a = cuda.shared.array((BLOCK_DIM, BLOCK_DIM), numba.float32)
+    tile_b = cuda.shared.array((BLOCK_DIM, BLOCK_DIM), numba.float32)
 
-    # Check thread boundaries before computation
-    if cuda.threadIdx.x < size and cuda.threadIdx.y < size:
-        # Load matrices into shared memory
-        # Each thread loads one element from each input matrix
-        # Using row-major layout: index = row * width + column
-        shared_a[cuda.threadIdx.x, cuda.threadIdx.y] = a[
-            cuda.threadIdx.x * size + cuda.threadIdx.y
-        ]
+    # Get local thread coordinates
+    i = cuda.threadIdx.x
+    j = cuda.threadIdx.y
 
-        shared_b[cuda.threadIdx.x, cuda.threadIdx.y] = b[
-            cuda.threadIdx.x * size + cuda.threadIdx.y
-        ]
+    # Skip threads outside matrix dimensions
+    if i >= size or j >= size:
+        return
 
-    # Synchronize to ensure all threads have finished loading data
+    # Copy input values to shared memory buffers
+    tile_a[i, j] = a[size * i + j]
+    tile_b[i, j] = b[size * i + j]
+
+    # Wait for all threads to finish loading
     cuda.syncthreads()
 
-    # Initialize accumulator for dot product
-    acc = 0
+    # Calculate matrix product element
+    sum_val = 0.0
+    for idx in range(size):
+        sum_val += tile_a[i, idx] * tile_b[idx, j]
 
-    # Compute dot product for this thread's output element
-    # Each thread computes one element of result matrix
-    for k in range(size):
-        # Multiply and accumulate corresponding elements
-        # from matrix A's row and matrix B's column
-        acc += shared_a[cuda.threadIdx.x, k] * shared_b[k, cuda.threadIdx.y]
-
-    # Store final result in output matrix using linear indexing
-    out[cuda.threadIdx.x * size + cuda.threadIdx.y] = acc
+    # Store final value in output matrix
+    out[size * i + j] = sum_val
 
 
 jit_mm_practice = jit(_mm_practice)
