@@ -283,16 +283,26 @@ def _sum_practice(out: Storage, a: Storage, size: int) -> None:
     i = cuda.blockIdx.x * cuda.blockDim.x + cuda.threadIdx.x
     pos = cuda.threadIdx.x
 
-    # process if thread is within input size
+    # only process if thread is within input size
     if i < size:
         cache[pos] = a[i]
+    else:
+        cache[pos] = 0.0
+    
+    cuda.syncthreads()
+
+    # Perform reduction within the block
+    stride = 1
+    while stride < BLOCK_DIM:
+        if pos % (2 * stride) == 0 and pos + stride < BLOCK_DIM:
+            cache[pos] += cache[pos + stride]
         cuda.syncthreads()
-        if pos == 0:
-            acc = 0
-            block_size = min(BLOCK_DIM, size - i)
-            for j in range(block_size):
-                acc += cache[j]
-            out[cuda.blockIdx.x] = acc
+        stride *= 2
+
+    # Write the result for this block to global memory
+    if pos == 0:
+        out[cuda.blockIdx.x] = cache[0]
+        
 
 
 jit_sum_practice = cuda.jit()(_sum_practice)
