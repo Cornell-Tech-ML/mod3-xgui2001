@@ -283,25 +283,17 @@ def _sum_practice(out: Storage, a: Storage, size: int) -> None:
     i = cuda.blockIdx.x * cuda.blockDim.x + cuda.threadIdx.x
     pos = cuda.threadIdx.x
 
-    # Load input data into shared memory
+    # process if thread is within input size
     if i < size:
-        cache[i] = float(a[i])
-    else:
-        cache[pos] = 0.0
-
-    cuda.syncthreads()
-
-    # Perform reduction within the block
-    step = 1
-    while step < cuda.blockDim.x:
-        if pos % (2 * step) == 0 and (pos + step) < cuda.blockDim.x:
-            cache[pos] += cache[pos + step]
+        cache[pos] = a[i]
         cuda.syncthreads()
-        step *= 2
+        if pos == 0:
+            acc = 0
+            block_size = min(BLOCK_DIM, size - i)
+            for j in range(block_size):
+                acc += cache[j]
+            out[cuda.blockIdx.x] = acc
 
-    # Output the result for this block
-    if pos == 0:
-        out[cuda.blockIdx.x] = cache[0]
 
 jit_sum_practice = cuda.jit()(_sum_practice)
 
@@ -364,13 +356,19 @@ def tensor_reduce(
         # Global thread index
         i = cuda.blockIdx.x * cuda.blockDim.x + cuda.threadIdx.x
 
+        # Only process if thread is within output size
         if i < out_size:
+            # index for output tensor
             to_index(i, out_shape, out_index)
+            # position in output tensor
             out_pos = index_to_position(out_index, out_strides)
 
             for j in range(a_shape[reduce_dim]):
+                # index for input tensor    
                 out_index[reduce_dim] = j
+                # position in input tensor
                 in_pos = index_to_position(out_index, a_strides)
+                # apply function to input tensor and store in output tensor
                 reduce_value = fn(reduce_value, a_storage[in_pos])
 
             out[out_pos] = reduce_value
