@@ -47,8 +47,9 @@ def index_to_position(index: Index, strides: Strides) -> int:
 
     """
     position = 0
-    for idx, stride in zip(index, strides):
-        position += idx * stride
+    for ind, stride in zip(index, strides):
+        position += ind * stride
+
     return position
 
 
@@ -65,11 +66,11 @@ def to_index(ordinal: int, shape: Shape, out_index: OutIndex) -> None:
         out_index : return index corresponding to position.
 
     """
-    curr_ord = ordinal + 0
+    cur_ord = ordinal + 0
     for i in range(len(shape) - 1, -1, -1):
         sh = shape[i]
-        out_index[i] = curr_ord % sh
-        curr_ord = curr_ord // sh
+        out_index[i] = int(cur_ord % sh)
+        cur_ord = cur_ord // sh
 
 
 def broadcast_index(
@@ -95,7 +96,7 @@ def broadcast_index(
     """
     for i, s in enumerate(shape):
         if s > 1:
-            out_index[i] = big_index[i + len(big_shape) - len(shape)]
+            out_index[i] = big_index[i + (len(big_shape) - len(shape))]
         else:
             out_index[i] = 0
     return None
@@ -121,8 +122,8 @@ def shape_broadcast(shape1: UserShape, shape2: UserShape) -> UserShape:
     a, b = shape1, shape2
     m = max(len(a), len(b))
     c_rev = [0] * m
-    b_rev = list(reversed(b))
     a_rev = list(reversed(a))
+    b_rev = list(reversed(b))
     for i in range(m):
         if i >= len(a):
             c_rev[i] = b_rev[i]
@@ -131,13 +132,9 @@ def shape_broadcast(shape1: UserShape, shape2: UserShape) -> UserShape:
         else:
             c_rev[i] = max(a_rev[i], b_rev[i])
             if a_rev[i] != c_rev[i] and a_rev[i] != 1:
-                raise IndexingError(
-                    f"Cannot broadcast dimensions: {a_rev[i]} and {b_rev[i]}"
-                )
+                raise IndexingError(f"Broadcast failure {a} {b}")
             if b_rev[i] != c_rev[i] and b_rev[i] != 1:
-                raise IndexingError(
-                    f"Cannot broadcast dimensions: {a_rev[i]} and {b_rev[i]}"
-                )
+                raise IndexingError(f"Broadcast failure {a} {b}")
     return tuple(reversed(c_rev))
 
 
