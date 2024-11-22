@@ -410,3 +410,15 @@ part of the larger parallel loop (#13).
 Allocation hoisting:
 No allocation hoisting found
 None
+
+* 3.4 Timing Optimizations
+
+| Size  | Fast (CPU) | GPU (Optimized) |
+|-------|------------|-----------------|
+| 64    | 0.00318    | 0.00568         |
+| 128   | 0.01637    | 0.01250         |
+| 256   | 0.09008    | 0.04788         |
+| 512   | 0.96055    | 0.19299         |
+| 1024  | 7.46985    | 0.97894         |
+
+![Graph](./output.png)
