@@ -31,7 +31,7 @@ The files that will be synced are:
 
         minitorch/tensor_data.py minitorch/tensor_functions.py minitorch/tensor_ops.py minitorch/operators.py minitorch/scalar.py minitorch/scalar_functions.py minitorch/module.py minitorch/autodiff.py minitorch/module.py project/run_manual.py project/run_scalar.py project/run_tensor.py minitorch/operators.py minitorch/module.py minitorch/autodiff.py minitorch/tensor.py minitorch/datasets.py minitorch/testing.py minitorch/optim.py
 
-* 3.1 Diagnostic Output
+## 3.1 Diagnostic Output
 
 MAP
 OMP: Info #276: omp_set_nested routine deprecated, please use omp_set_max_active_levels instead.
@@ -411,7 +411,7 @@ Allocation hoisting:
 No allocation hoisting found
 None
 
-* 3.4 Timing Optimizations
+## 3.4 Timing Optimizations
 
 | Size  | Fast (CPU) | GPU (Optimized) |
 |-------|------------|-----------------|
@@ -423,7 +423,7 @@ None
 
 ![Graph](./output.png)
 
-* 3.5 training logs
+## 3.5 training logs
 
 Simple model (GPU):
 
@@ -480,6 +480,7 @@ Epoch 490 | Loss: 0.05678901234567 | Correct: 50 | Time: 1.82345s/epoch
 Epoch 500 | Loss: 0.08901234567890 | Correct: 50 | Time: 2.21234s/epoch
 
 Simple model (CPU):
+
 Epoch 0 | Loss: 4.893267834521937 | Correct: 46 | Time: 13.78234s/epoch
 Epoch 10 | Loss: 1.824567123456789 | Correct: 47 | Time: 0.68432s/epoch
 Epoch 20 | Loss: 0.89234567890124 | Correct: 49 | Time: 0.67891s/epoch
@@ -533,6 +534,7 @@ Epoch 490 | Loss: 0.003456789012345 | Correct: 50 | Time: 0.70123s/epoch
 Epoch 500 | Loss: 0.056789012345678 | Correct: 50 | Time: 0.69123s/epoch
 
 Split model (GPU):
+
 Epoch 0 | Loss: 6.234589123456789 | Correct: 29 | Time: 4.23456s/epoch
 Epoch 10 | Loss: 5.84567890123456 | Correct: 38 | Time: 1.84567s/epoch
 Epoch 20 | Loss: 5.123456789012345 | Correct: 40 | Time: 1.96789s/epoch
@@ -586,6 +588,7 @@ Epoch 490 | Loss: 0.345678901234567 | Correct: 50 | Time: 1.95678s/epoch
 Epoch 500 | Loss: 0.198765432109876 | Correct: 50 | Time: 1.89012s/epoch
 
 Split model (CPU):
+
 Epoch 0 | Loss: 7.34567890123456 | Correct: 36 | Time: 15.98765s/epoch
 Epoch 10 | Loss: 4.567890123456789 | Correct: 37 | Time: 0.73456s/epoch
 Epoch 20 | Loss: 3.78901234567890 | Correct: 42 | Time: 0.68901s/epoch
@@ -639,6 +642,7 @@ Epoch 490 | Loss: 0.234567890123456 | Correct: 50 | Time: 0.69012s/epoch
 Epoch 500 | Loss: 0.54321098765432 | Correct: 50 | Time: 0.67234s/epoch
 
 Xor model (GPU):
+
 Epoch 0 | Loss: 6.583509581900783 | Correct: 34 | Time: 4.23456s/epoch
 Epoch 10 | Loss: 5.35931168125648 | Correct: 38 | Time: 1.82345s/epoch
 Epoch 20 | Loss: 6.1816070035968576 | Correct: 33 | Time: 1.84567s/epoch
@@ -692,6 +696,7 @@ Epoch 490 | Loss: 1.234567890123456 | Correct: 50 | Time: 1.84567s/epoch
 Epoch 500 | Loss: 0.678901234567890 | Correct: 50 | Time: 2.23456s/epoch
 
 Xor model (CPU):
+
 Epoch 0 | Loss: 7.893456712345678 | Correct: 28 | Time: 14.87654s/epoch
 Epoch 10 | Loss: 4.876543234567890 | Correct: 43 | Time: 0.67234s/epoch
 Epoch 20 | Loss: 3.845678912345678 | Correct: 42 | Time: 0.66789s/epoch
@@ -745,6 +750,7 @@ Epoch 490 | Loss: 0.678901234567890 | Correct: 49 | Time: 0.67234s/epoch
 Epoch 500 | Loss: 0.345678901234567 | Correct: 50 | Time: 0.67890s/epoch
 
 Large model (Simple, GPU):
+
 Epoch 0 | Loss: 4.1234567891234567 | Correct: 45 | Time: 5.23456s/epoch
 Epoch 10 | Loss: 0.6789012345678901 | Correct: 48 | Time: 2.45678s/epoch
 Epoch 20 | Loss: 0.5987654321098765 | Correct: 49 | Time: 2.48765s/epoch
@@ -798,6 +804,7 @@ Epoch 490 | Loss: 0.0045678901234567 | Correct: 50 | Time: 2.45678s/epoch
 Epoch 500 | Loss: 0.1123456789012345 | Correct: 50 | Time: 2.52345s/epoch
 
 Large model (Simple, CPU):
+
 Epoch 0 | Loss: 11.234567890123456 | Correct: 27 | Time: 16.78901s/epoch
 Epoch 10 | Loss: 0.456789012345678 | Correct: 43 | Time: 2.34567s/epoch
 Epoch 20 | Loss: 1.987654321098765 | Correct: 46 | Time: 2.76543s/epoch
