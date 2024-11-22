@@ -425,7 +425,7 @@ None
 
 * 3.5 training logs
 
-Simple model (GPU): 
+Simple model (GPU):
 
 Epoch 0 | Loss: 7.2845632891245673 | Correct: 42 | Time: 6.12453s/epoch
 Epoch 10 | Loss: 1.8934567234561234 | Correct: 47 | Time: 1.92345s/epoch
@@ -479,7 +479,7 @@ Epoch 480 | Loss: 0.0089012345678 | Correct: 50 | Time: 2.38901s/epoch
 Epoch 490 | Loss: 0.05678901234567 | Correct: 50 | Time: 1.82345s/epoch
 Epoch 500 | Loss: 0.08901234567890 | Correct: 50 | Time: 2.21234s/epoch
 
-Simple model (CPU): 
+Simple model (CPU):
 Epoch 0 | Loss: 4.893267834521937 | Correct: 46 | Time: 13.78234s/epoch
 Epoch 10 | Loss: 1.824567123456789 | Correct: 47 | Time: 0.68432s/epoch
 Epoch 20 | Loss: 0.89234567890124 | Correct: 49 | Time: 0.67891s/epoch
@@ -532,7 +532,7 @@ Epoch 480 | Loss: 0.234567890123456 | Correct: 50 | Time: 0.67890s/epoch
 Epoch 490 | Loss: 0.003456789012345 | Correct: 50 | Time: 0.70123s/epoch
 Epoch 500 | Loss: 0.056789012345678 | Correct: 50 | Time: 0.69123s/epoch
 
-Split model (GPU): 
+Split model (GPU):
 Epoch 0 | Loss: 6.234589123456789 | Correct: 29 | Time: 4.23456s/epoch
 Epoch 10 | Loss: 5.84567890123456 | Correct: 38 | Time: 1.84567s/epoch
 Epoch 20 | Loss: 5.123456789012345 | Correct: 40 | Time: 1.96789s/epoch
@@ -585,7 +585,7 @@ Epoch 480 | Loss: 0.432109876543210 | Correct: 50 | Time: 1.83456s/epoch
 Epoch 490 | Loss: 0.345678901234567 | Correct: 50 | Time: 1.95678s/epoch
 Epoch 500 | Loss: 0.198765432109876 | Correct: 50 | Time: 1.89012s/epoch
 
-Split model (CPU): 
+Split model (CPU):
 Epoch 0 | Loss: 7.34567890123456 | Correct: 36 | Time: 15.98765s/epoch
 Epoch 10 | Loss: 4.567890123456789 | Correct: 37 | Time: 0.73456s/epoch
 Epoch 20 | Loss: 3.78901234567890 | Correct: 42 | Time: 0.68901s/epoch

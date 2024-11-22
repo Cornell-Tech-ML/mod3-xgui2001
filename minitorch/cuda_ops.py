@@ -613,4 +613,5 @@ def _tensor_matrix_multiply(
         # Store computed result in global memory
         out[out_pos] = value
 
+
 tensor_matrix_multiply = jit(_tensor_matrix_multiply)
