@@ -29,13 +29,35 @@ FakeCUDAKernel = Any
 Fn = TypeVar("Fn")
 
 
-def device_jit(fn: Fn, **kwargs) -> Fn:
-    """Decorator to compile a function for CUDA."""
+def device_jit(fn: Fn, **kwargs: Any) -> Fn:
+    """Decorator to compile a function for CUDA.
+
+    Args:
+    ----
+        fn (Fn): function to compile.
+        **kwargs: keyword arguments for numba.jit.
+
+    Returns:
+    -------
+        Fn: compiled function.
+
+    """
     return _jit(device=True, **kwargs)(fn)  # type: ignore
 
 
-def jit(fn, **kwargs) -> FakeCUDAKernel:
-    """Decorator to compile a function for CUDA."""
+def jit(fn: Fn, **kwargs: Any) -> FakeCUDAKernel:
+    """Decorator to compile a function for CUDA.
+
+    Args:
+    ----
+        fn: function to compile.
+        **kwargs: keyword arguments for numba.jit.
+
+    Returns:
+    -------
+        FakeCUDAKernel: compiled function.
+
+    """
     return _jit(**kwargs)(fn)  # type: ignore
 
 
@@ -288,7 +310,7 @@ def _sum_practice(out: Storage, a: Storage, size: int) -> None:
         cache[pos] = a[i]
     else:
         cache[pos] = 0.0
-    
+
     cuda.syncthreads()
 
     # Perform reduction within the block
@@ -302,7 +324,6 @@ def _sum_practice(out: Storage, a: Storage, size: int) -> None:
     # Write the result for this block to global memory
     if pos == 0:
         out[cuda.blockIdx.x] = cache[0]
-        
 
 
 jit_sum_practice = cuda.jit()(_sum_practice)
@@ -357,8 +378,8 @@ def tensor_reduce(
         reduce_dim: int,
         reduce_value: float,
     ) -> None:
-        #BLOCK_DIM = 1024
-        #cache = cuda.shared.array(BLOCK_DIM, numba.float64)
+        # BLOCK_DIM = 1024
+        # cache = cuda.shared.array(BLOCK_DIM, numba.float64)
         out_index = cuda.local.array(MAX_DIMS, numba.int32)
         # block_pos = cuda.blockIdx.x
         # thread_pos = cuda.threadIdx.x
@@ -374,7 +395,7 @@ def tensor_reduce(
             out_pos = index_to_position(out_index, out_strides)
 
             for j in range(a_shape[reduce_dim]):
-                # index for input tensor    
+                # index for input tensor
                 out_index[reduce_dim] = j
                 # position in input tensor
                 in_pos = index_to_position(out_index, a_strides)
@@ -444,6 +465,7 @@ def _mm_practice(out: Storage, a: Storage, b: Storage, size: int) -> None:
 
     # Store final value in output matrix
     out[size * i + j] = sum_val
+
 
 jit_mm_practice = jit(_mm_practice)
 
@@ -523,7 +545,7 @@ def _tensor_matrix_multiply(
     #    b) Copy into shared memory for b matrix
     #    c) Compute the dot produce for position c[i, j]
 
-     # 'value' is the accumulator for the dot product of the corresponding row of a and column of b.
+    # 'value' is the accumulator for the dot product of the corresponding row of a and column of b.
     # Each thread will compute one elemnet of the result matrix.
     value = 0.0
 
@@ -580,5 +602,6 @@ def _tensor_matrix_multiply(
     if i < out_shape[-2] and j < out_shape[-1]:
         out_pos = batch * out_strides[0] + i * out_strides[1] + j * out_strides[2]
         out[out_pos] = value
-    
+
+
 tensor_matrix_multiply = jit(_tensor_matrix_multiply)

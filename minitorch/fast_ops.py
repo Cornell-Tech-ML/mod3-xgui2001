@@ -30,6 +30,18 @@ Fn = TypeVar("Fn")
 
 
 def njit(fn: Fn, **kwargs: Any) -> Fn:
+    """Decorator to compile a function with numba.jit.
+
+    Args:
+    ----
+        fn: function to compile.
+        **kwargs: keyword arguments for numba.jit.
+
+    Returns:
+    -------
+        Compiled function.
+
+    """
     return _njit(inline="always", **kwargs)(fn)  # type: ignore
 
 
